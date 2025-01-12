@@ -1,0 +1,91 @@
+<div class="flex justify-center">
+  <section class="w-full max-w-3xl shadow my-3" hlmCard>
+    <div hlmCardHeader>
+      <h3 hlmCardTitle>How Many Persons?</h3>
+      <p hlmCardDescription>Enter the number of persons.</p>
+    </div>
+    <p hlmCardContent>
+      <label class="block" hlmLabel>
+        Count
+        <input class="mt-1.5 w-full" [(ngModel)]="numberOfPersons" type="number" min="1" placeholder="Number of Persons"
+               hlmInput/>
+      </label>
+    </p>
+    <div hlmCardFooter class="flex justify-between">
+      <button (click)="resetEverything()" hlmBtn variant="ghost">Reset</button>
+      <button hlmBtn (click)="generateNameInput()">Create</button>
+    </div>
+  </section>
+</div>
+@if (shouldShowInputs) {
+  <div hlmCard class="shadow flex flex-col items-center max-w-3xl mx-auto">
+    <div class="flex flex-wrap justify-center items-center gap-3 mt-3">
+      @for (person of persons; track person.id) {
+        <label class="max-w-xs" hlmLabel> Person {{ person.id + 1 }} Name:
+          <input (input)="verifyInputs()" class="w-full" [(ngModel)]="person.name" required hlmInput
+                 [placeholder]='"Person " + (person.id+1) + " Name" ' type='text'/>
+        </label>
+      }
+    </div>
+    <div class="flex justify-center items-center gap-3 my-3">
+      <button class="max-w-xs w-full" hlmBtn [disabled]="!enableGenerateCardButton" (click)="generateBillCards()">
+        Generate
+        Bill Cards
+      </button>
+    </div>
+  </div>
+}
+@if (shouldShowBillCards) {
+  <div class="flex flex-col justify-center items-center gap-3 mb-3">
+    <div class="flex justify-center items-center p-0 w-full">
+      <div class="flex flex-col sm:flex-row justify-center items-center gap-2 mb-0 mt-3 p-3 shadow w-full max-w-3xl"
+           hlmCard>
+        <label hlmLabel>GST Percentage:
+          <input [(ngModel)]="gstPercentage" hlmInput type="number"/>
+        </label>
+        <label hlmLabel>Amount Divided To Everyone:
+          <input [(ngModel)]="amountToBeDividedToEveryone" hlmInput type="number"/>
+        </label>
+      </div>
+    </div>
+    @for (person of persons; track person.id) {
+      <div
+        class="grid grid-cols-1 md:grid-cols-12 gap-3 justify-between items-center p-0 w-full max-w-3xl p-3 bg-zinc-200"
+        hlmCard>
+        <div class="col-span-1 md:col-span-2 p-3 flex justify-center items-center flex-col shadow h-32 gap-3" hlmCard>
+          <div hlmCardHeader class="relative py-0">
+            <img class="w-14 rounded-full" [ngSrc]="generateAvatar(person.name)"
+                 [alt]="person.name" width="100" height="100">
+          </div>
+          <div hlmCardContent class="py-0 flex justify-center items-center flex-col gap-2">
+            <div hlmBadge variant="secondary" class="w-24 justify-center webkit-center">
+              {{ person.name }}
+            </div>
+            <div hlmBadge variant="secondary" class="w-24 justify-center webkit-center">
+              {{ person.totalAmount.toFixed(2) }}
+            </div>
+          </div>
+        </div>
+        <div class="col-span-1 md:col-span-8 p-3 flex justify-start items-center shadow h-32 overflow-y-scroll" hlmCard>
+          <div class="flex justify-start items-center flex-wrap gap-3">
+            @for (amount of person.listOfAmounts; track amount.id) {
+              <input class="w-36" [(ngModel)]="amount.amount" hlmInput type="number"/>
+            }
+            <button (click)="addNewAmountInput(person.id)" hlmBtn size="icon" variant="outline">
+              <hlm-icon size='sm' name="lucideCirclePlus"/>
+            </button>
+          </div>
+        </div>
+        <div class="col-span-1 md:col-span-2 p-3 flex justify-center items-center shadow h-32" hlmCard>
+          <label hlmLabel>
+            <hlm-checkbox class="mr-2" [(ngModel)]="person.isIncludedInDividedAmount"/>
+            Is Included In Divided Amount?
+          </label>
+        </div>
+      </div>
+    }
+    <div class="flex justify-center items-center gap-3">
+      <button class="max-w-xs w-full" hlmBtn (click)="calculateBill()">Calculate Bill</button>
+    </div>
+  </div>
+}
