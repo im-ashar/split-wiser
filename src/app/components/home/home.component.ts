@@ -17,7 +17,7 @@ import {FormsModule} from '@angular/forms';
 import {Person} from '../../interfaces/person';
 import {HlmBadgeDirective} from '@spartan-ng/ui-badge-helm';
 import {NgOptimizedImage} from '@angular/common';
-import {BrnDialogTriggerDirective} from '@spartan-ng/brain/dialog';
+import {BrnDialogContentDirective, BrnDialogTriggerDirective} from '@spartan-ng/brain/dialog';
 import {
   HlmDialogComponent,
   HlmDialogContentComponent, HlmDialogDescriptionDirective,
@@ -57,6 +57,7 @@ import {HlmSelectImports} from '@spartan-ng/ui-select-helm';
     NgOptimizedImage,
     BrnSelectImports,
     HlmSelectImports,
+    BrnDialogContentDirective,
   ],
   providers: [provideIcons({lucideCheck, lucideChevronDown, lucideChevronUp, lucideCirclePlus})],
   templateUrl: './home.component.html',
