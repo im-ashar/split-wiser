@@ -10,7 +10,6 @@ import {
   HlmCardImports,
   HlmCardTitleDirective,
 } from '@spartan-ng/ui-card-helm';
-import {HlmAvatarComponent} from '@spartan-ng/ui-avatar-helm';
 import {HlmCommandImports} from '@spartan-ng/ui-command-helm';
 import {HlmIconComponent, provideIcons} from '@spartan-ng/ui-icon-helm';
 import {HlmInputDirective} from '@spartan-ng/ui-input-helm';
@@ -18,7 +17,6 @@ import {HlmLabelDirective} from '@spartan-ng/ui-label-helm';
 import {FormsModule} from '@angular/forms';
 import {Person} from '../../interfaces/person';
 import {HlmCheckboxComponent} from '@spartan-ng/ui-checkbox-helm';
-import {HlmSpinnerComponent} from '@spartan-ng/ui-spinner-helm';
 import {HlmBadgeDirective} from '@spartan-ng/ui-badge-helm';
 import {NgOptimizedImage} from '@angular/common';
 
@@ -33,7 +31,6 @@ import {NgOptimizedImage} from '@angular/common';
     HlmCardDescriptionDirective,
     HlmInputDirective,
     HlmCardFooterDirective,
-    HlmSpinnerComponent,
     HlmIconComponent,
     HlmButtonDirective,
     HlmCardContentDirective,
@@ -41,7 +38,6 @@ import {NgOptimizedImage} from '@angular/common';
     HlmLabelDirective,
     FormsModule,
     HlmCheckboxComponent,
-    HlmAvatarComponent,
     HlmBadgeDirective,
     NgOptimizedImage
   ],
