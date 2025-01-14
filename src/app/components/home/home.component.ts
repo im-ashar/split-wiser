@@ -1,4 +1,4 @@
-import {lucideCheck, lucideChevronDown, lucideCirclePlus} from '@ng-icons/lucide';
+import {lucideCheck, lucideChevronDown, lucideChevronUp, lucideCirclePlus} from '@ng-icons/lucide';
 import {HlmButtonDirective} from '@spartan-ng/ui-button-helm';
 import {Component} from '@angular/core';
 import {
@@ -10,21 +10,37 @@ import {
   HlmCardImports,
   HlmCardTitleDirective,
 } from '@spartan-ng/ui-card-helm';
-import {HlmCommandImports} from '@spartan-ng/ui-command-helm';
 import {HlmIconComponent, provideIcons} from '@spartan-ng/ui-icon-helm';
 import {HlmInputDirective} from '@spartan-ng/ui-input-helm';
 import {HlmLabelDirective} from '@spartan-ng/ui-label-helm';
 import {FormsModule} from '@angular/forms';
 import {Person} from '../../interfaces/person';
-import {HlmCheckboxComponent} from '@spartan-ng/ui-checkbox-helm';
 import {HlmBadgeDirective} from '@spartan-ng/ui-badge-helm';
 import {NgOptimizedImage} from '@angular/common';
+import {BrnDialogTriggerDirective} from '@spartan-ng/brain/dialog';
+import {
+  HlmDialogComponent,
+  HlmDialogContentComponent, HlmDialogDescriptionDirective,
+  HlmDialogFooterComponent,
+  HlmDialogHeaderComponent, HlmDialogTitleDirective
+} from '@spartan-ng/ui-dialog-helm';
+import {BrnSelectImports} from '@spartan-ng/brain/select';
+import {HlmSelectImports} from '@spartan-ng/ui-select-helm';
 
 @Component({
   selector: 'home-component',
   standalone: true,
   imports: [
-    HlmCommandImports,
+    BrnDialogTriggerDirective,
+    HlmDialogComponent,
+    HlmDialogContentComponent,
+    HlmDialogHeaderComponent,
+    HlmDialogFooterComponent,
+    HlmDialogTitleDirective,
+    HlmDialogDescriptionDirective,
+    HlmLabelDirective,
+    HlmInputDirective,
+    HlmButtonDirective,
     HlmCardDirective,
     HlmCardHeaderDirective,
     HlmCardTitleDirective,
@@ -37,42 +53,43 @@ import {NgOptimizedImage} from '@angular/common';
     HlmCardImports,
     HlmLabelDirective,
     FormsModule,
-    HlmCheckboxComponent,
     HlmBadgeDirective,
-    NgOptimizedImage
+    NgOptimizedImage,
+    BrnSelectImports,
+    HlmSelectImports,
   ],
-  providers: [provideIcons({lucideCheck, lucideChevronDown, lucideCirclePlus})],
+  providers: [provideIcons({lucideCheck, lucideChevronDown, lucideChevronUp, lucideCirclePlus})],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
 export class HomeComponent {
   persons: Person[] = [];
-  numberOfPersons: number = 0;
+  numberOfPersons: number | undefined;
   shouldShowBillCards: boolean = false;
   shouldShowInputs: boolean = false;
   enableGenerateCardButton: boolean = false;
-  gstPercentage: number = 0;
-  amountToBeDividedToEveryone: number = 0;
+  gstPercentage: number | undefined;
   totalBill: number = 0;
+  selectedPersons: Person[] = [];
+  itemPrice: number | undefined;
 
   generateNameInput(): void {
-    if (this.numberOfPersons <= 1) {
+    if (this.numberOfPersons === undefined || this.numberOfPersons <= 1) {
       alert("Please enter a valid count of persons");
       return;
     }
 
-    if (this.numberOfPersons > this.persons.length) {
+    if (this.numberOfPersons && this.numberOfPersons > this.persons.length) {
       // Add new inputs
       for (let i = this.persons.length; i < this.numberOfPersons; i++) {
         this.persons.push({
           id: i,
           name: '',
           totalAmount: 0,
-          listOfAmounts: [{id: Math.random(), amount: 0}],
-          isIncludedInDividedAmount: true
+          listOfAmounts: [],
         });
       }
-    } else if (this.numberOfPersons < this.persons.length) {
+    } else if (this.numberOfPersons && this.numberOfPersons < this.persons.length) {
       // Remove extra inputs
       this.persons.splice(this.numberOfPersons);
     }
@@ -90,50 +107,67 @@ export class HomeComponent {
   }
 
   verifyInputs(): void {
-    this.enableGenerateCardButton = this.persons.every(person => person.name.trim() !== '');
+    const names = this.persons.map(person => person.name.trim());
+    const uniqueNames = new Set(names);
+    this.enableGenerateCardButton = names.length === uniqueNames.size && names.every(name => name !== '');
   }
 
   addNewAmountInput(id: number): void {
     const person = this.persons.find(p => p.id === id);
     if (person) {
-      person.listOfAmounts.push({id: Math.random(), amount: 0});
+      person.listOfAmounts.push({id: Math.random(), amount: undefined});
     }
   }
 
   calculateBill(): void {
     // Calculate total bill with GST applied
-    this.persons.forEach(person => {
-      person.totalAmount = person.listOfAmounts.reduce((sum, amount) => {
-        const gstAmount = amount.amount * this.gstPercentage / 100;
-        const amountWithGST = this.gstPercentage > 0 ? amount.amount + gstAmount : amount.amount;
-        return sum + amountWithGST;
-      }, 0);
-      this.totalBill += person.totalAmount;
-    });
-
-    // Calculate the amount to be added to each person
-    if (this.amountToBeDividedToEveryone > 0) {
-      const excludedPersons = this.persons.filter(person => !person.isIncludedInDividedAmount);
-      const includedPersons = this.persons.filter(person => person.isIncludedInDividedAmount);
-      const amountPerPerson = this.amountToBeDividedToEveryone / includedPersons.length;
-      // Add the divided amount to each included person's total amount
-      includedPersons.forEach(person => {
-        person.totalAmount += amountPerPerson;
+    if (this.gstPercentage && this.gstPercentage > 0) {
+      this.persons.forEach(person => {
+        person.totalAmount = person.listOfAmounts.reduce((sum, amount) => {
+          const gstAmount = (amount.amount ?? 0) * (this.gstPercentage! / 100);
+          const amountWithGST = (amount.amount ?? 0) + gstAmount;
+          return sum + amountWithGST;
+        }, 0);
+        this.totalBill += person.totalAmount;
       });
-      this.totalBill += this.amountToBeDividedToEveryone;
-      this.persons = [...excludedPersons, ...includedPersons];
+    } else {
+      this.persons.forEach(person => {
+        person.totalAmount = person.listOfAmounts.reduce((sum, amount) => sum + (amount.amount ?? 0), 0);
+        this.totalBill += person.totalAmount;
+      });
     }
-    this.persons.sort((a, b) => a.id - b.id);
   }
 
   resetEverything(): void {
     this.persons = [];
-    this.numberOfPersons = 0;
+    this.numberOfPersons = undefined;
     this.shouldShowBillCards = false;
     this.shouldShowInputs = false;
     this.enableGenerateCardButton = false;
-    this.gstPercentage = 0;
-    this.amountToBeDividedToEveryone = 0;
+    this.gstPercentage = undefined;
     this.totalBill = 0;
+    this.selectedPersons = [];
+    this.itemPrice = undefined;
+  }
+
+  selectAllPersons() {
+    this.selectedPersons = [...this.persons];
+  }
+
+  addToAmountList(): void {
+    if (this.itemPrice && this.itemPrice > 0 && this.selectedPersons?.length > 0) {
+      this.selectedPersons = this.selectedPersons.flat();
+      const amountPerPerson = Number((this.itemPrice / this.selectedPersons.length).toFixed(2));
+      this.selectedPersons.forEach(person => {
+        const personToUpdate = this.persons.find(p => p.id === person.id);
+        if (personToUpdate) {
+          personToUpdate.listOfAmounts.push({id: Math.random(), amount: amountPerPerson});
+          personToUpdate.totalAmount += amountPerPerson;
+        }
+      });
+      this.totalBill += this.itemPrice;
+      this.itemPrice = undefined;
+      this.selectedPersons = []
+    }
   }
 }

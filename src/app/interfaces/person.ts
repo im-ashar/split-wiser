@@ -3,10 +3,10 @@ export interface Person {
   name: string;
   totalAmount: number;
   listOfAmounts: Amount[];
-  isIncludedInDividedAmount: boolean;
 }
 
 export interface Amount {
   id: number;
-  amount: number;
+  amount: number | undefined;
 }
+

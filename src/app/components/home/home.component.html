@@ -5,11 +5,8 @@
       <p hlmCardDescription>Enter the number of persons.</p>
     </div>
     <p hlmCardContent>
-      <label class="block" hlmLabel>
-        Count
-        <input class="mt-1.5 w-full" [(ngModel)]="numberOfPersons" type="number" min="1" placeholder="Number of Persons"
-               hlmInput/>
-      </label>
+      <input class="w-full" [(ngModel)]="numberOfPersons" type="number" min="1" placeholder="Number of Persons"
+             hlmInput/>
     </p>
     <div hlmCardFooter class="flex justify-between">
       <button (click)="resetEverything()" hlmBtn variant="ghost">Reset</button>
@@ -27,11 +24,15 @@
         </label>
       }
     </div>
-    <div class="flex justify-center items-center gap-3 my-3">
+    <div class="flex justify-center items-center gap-3 my-3 flex-col w-40">
       <button class="max-w-xs w-full" hlmBtn [disabled]="!enableGenerateCardButton" (click)="generateBillCards()">
         Generate
         Bill Cards
       </button>
+      @if (!enableGenerateCardButton) {
+        <small class="text-red-600 text-xs text-pretty text-center">Names are required and should not be
+          duplicated</small>
+      }
     </div>
   </div>
 }
@@ -40,17 +41,56 @@
     <div class="flex justify-center items-center p-0 w-full">
       <div class="flex flex-col sm:flex-row justify-center items-center gap-2 mb-0 mt-3 p-3 shadow w-full max-w-3xl"
            hlmCard>
-        <label hlmLabel>GST Percentage:
-          <input [(ngModel)]="gstPercentage" hlmInput type="number"/>
+        <label hlmLabel><span></span>
+          <input [(ngModel)]="gstPercentage" (input)="calculateBill()" hlmInput placeholder="GST Percentage"
+                 type="number"/>
         </label>
-        <label hlmLabel>Amount Divided To Everyone:
-          <input [(ngModel)]="amountToBeDividedToEveryone" hlmInput type="number"/>
-        </label>
+        <div>
+          <hlm-dialog>
+            <button id="add-multi-person-item" brnDialogTrigger hlmBtn>
+              <hlm-icon size='sm' class="mr-2" name="lucideCirclePlus"/>
+              <span>Multi Person Item</span>
+            </button>
+            <hlm-dialog-content class="sm:max-w-[425px]" *brnDialogContent="let ctx">
+              <hlm-dialog-header>
+                <h3 hlmDialogTitle>Add Multi Person Item</h3>
+                <p hlmDialogDescription>Enter the price and select the persons associated with it</p>
+              </hlm-dialog-header>
+              <div class="py-4 grid gap-4">
+                <div class="items-center grid grid-cols-4 gap-4">
+                  <label hlmLabel for="price" class="text-right">Price</label>
+                  <input id="price" [(ngModel)]="itemPrice" class="w-[17.3rem]" hlmInput
+                         type="number"/>
+                </div>
+                <div class="items-center grid grid-cols-4 gap-4">
+                  <label hlmLabel class="text-right">Persons</label>
+                  <brn-select [(ngModel)]="selectedPersons" class="inline-block" placeholder="Select some person"
+                              [multiple]="true">
+                    <hlm-select-trigger class="w-[17.3rem]">
+                      <hlm-select-value/>
+                    </hlm-select-trigger>
+                    <hlm-select-content>
+                      @if (persons.length > 1) {
+                        <hlm-option [value]="persons" (click)="selectAllPersons()" class="font-bold">All</hlm-option>
+                      }
+                      @for (person of persons; track person.id) {
+                        <hlm-option [value]="person">{{ person.name }}</hlm-option>
+                      }
+                    </hlm-select-content>
+                  </brn-select>
+                </div>
+              </div>
+              <hlm-dialog-footer>
+                <button hlmBtn type="submit" (click)="addToAmountList()">Save changes</button>
+              </hlm-dialog-footer>
+            </hlm-dialog-content>
+          </hlm-dialog>
+        </div>
       </div>
     </div>
     @for (person of persons; track person.id) {
       <div
-        class="grid grid-cols-1 md:grid-cols-12 gap-3 justify-between items-center p-0 w-full max-w-3xl p-3 bg-zinc-200"
+        class="grid grid-cols-1 md:grid-cols-12 gap-3 justify-between items-center w-full max-w-3xl p-3 bg-zinc-200"
         hlmCard>
         <div class="col-span-1 md:col-span-2 p-3 flex justify-center items-center flex-col shadow h-32 gap-3" hlmCard>
           <div hlmCardHeader class="relative py-0">
@@ -66,26 +106,21 @@
             </div>
           </div>
         </div>
-        <div class="col-span-1 md:col-span-8 p-3 flex justify-start items-center shadow h-32 overflow-y-scroll" hlmCard>
+        <div class="col-span-1 md:col-span-10 p-3 flex justify-start items-center shadow h-32 overflow-y-scroll"
+             hlmCard>
           <div class="flex justify-start items-center flex-wrap gap-3">
             @for (amount of person.listOfAmounts; track amount.id) {
-              <input class="w-36" [(ngModel)]="amount.amount" hlmInput type="number"/>
+              <input class="w-36" (input)="calculateBill()" [(ngModel)]="amount.amount" hlmInput type="number"/>
             }
             <button (click)="addNewAmountInput(person.id)" hlmBtn size="icon" variant="outline">
               <hlm-icon size='sm' name="lucideCirclePlus"/>
             </button>
           </div>
         </div>
-        <div class="col-span-1 md:col-span-2 p-3 flex justify-center items-center shadow h-32" hlmCard>
-          <label hlmLabel>
-            <hlm-checkbox class="mr-2" [(ngModel)]="person.isIncludedInDividedAmount"/>
-            Is Included In Divided Amount?
-          </label>
-        </div>
       </div>
     }
     <div class="flex justify-center items-center gap-3">
-      <button class="max-w-xs w-full" hlmBtn (click)="calculateBill()">Calculate Bill</button>
+      <h3 class="font-extrabold">Total Bill: {{ totalBill }}</h3>
     </div>
   </div>
 }
