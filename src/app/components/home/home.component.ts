@@ -157,7 +157,13 @@ export class HomeComponent {
 
   addToAmountList(): void {
     if (this.itemPrice && this.itemPrice > 0 && this.selectedPersons?.length > 0) {
-      this.selectedPersons = this.selectedPersons.flat();
+      this.selectedPersons = Array.from(
+        new Map(
+          this.selectedPersons
+            .flat()
+            .map(person => [person.id, person])
+        ).values()
+      );
       const amountPerPerson = Number((this.itemPrice / this.selectedPersons.length).toFixed(2));
       this.selectedPersons.forEach(person => {
         const personToUpdate = this.persons.find(p => p.id === person.id);
