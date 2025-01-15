@@ -5,19 +5,19 @@
       <p hlmCardDescription>Enter the number of persons.</p>
     </div>
     <p hlmCardContent>
-      <input class="w-full" [(ngModel)]="numberOfPersons" type="number" min="1" placeholder="Number of Persons"
-             hlmInput/>
+      <input [(ngModel)]="numberOfPersons" class="w-full" hlmInput min="1" placeholder="Number of Persons"
+             type="number"/>
     </p>
-    <div hlmCardFooter class="flex justify-between">
+    <div class="flex justify-between" hlmCardFooter>
       <button (click)="resetEverything()" hlmBtn variant="ghost">Reset</button>
-      <button hlmBtn (click)="generateNameInput()">Create</button>
+      <button (click)="generateNameInput()" hlmBtn>Create</button>
     </div>
   </section>
 </div>
 @if (shouldShowInputs) {
   <div hlmCard class="shadow flex flex-col items-center max-w-3xl mx-auto">
     <div class="flex flex-wrap justify-center items-center gap-3 mt-3">
-      @for (person of persons; track person.id) {
+      @for (person of inputPersons; track person.id) {
         <label class="max-w-xs" hlmLabel> Person {{ person.id + 1 }} Name:
           <input (input)="verifyInputs()" class="w-full" [(ngModel)]="person.name" required hlmInput
                  [placeholder]='"Person " + (person.id+1) + " Name" ' type='text'/>
@@ -41,8 +41,12 @@
     <div class="flex justify-center items-center p-0 w-full">
       <div class="flex flex-col sm:flex-row justify-center items-center gap-2 mb-0 mt-3 p-3 shadow w-full max-w-3xl"
            hlmCard>
-        <label hlmLabel><span></span>
-          <input [(ngModel)]="gstPercentage" (input)="calculateBill()" hlmInput placeholder="GST Percentage"
+        <label hlmLabel>
+          <input [(ngModel)]="gstPercentage" (input)="calculateBill()" hlmInput placeholder="GST (%)"
+                 type="number"/>
+        </label>
+        <label hlmLabel>
+          <input [(ngModel)]="discountOnTotalBill" (input)="calculateBill()" hlmInput placeholder="Discount on Total Bill (%)"
                  type="number"/>
         </label>
         <div>
@@ -60,6 +64,11 @@
                 <div class="items-center grid grid-cols-4 gap-4">
                   <label hlmLabel for="price" class="text-right">Price</label>
                   <input id="price" [(ngModel)]="itemPrice" class="w-[17.3rem]" hlmInput
+                         type="number"/>
+                </div>
+                <div class="items-center grid grid-cols-4 gap-4">
+                  <label hlmLabel for="item-discount" class="text-right">Discount (%)</label>
+                  <input id="item-discount" [(ngModel)]="itemDiscount" class="w-[17.3rem]" hlmInput
                          type="number"/>
                 </div>
                 <div class="items-center grid grid-cols-4 gap-4">
@@ -98,10 +107,10 @@
                  [alt]="person.name" width="100" height="100">
           </div>
           <div hlmCardContent class="py-0 flex justify-center items-center flex-col gap-2">
-            <div hlmBadge variant="secondary" class="w-24 justify-center webkit-center">
+            <div hlmBadge variant="secondary" class="w-24 px-2 justify-center webkit-center whitespace-nowrap overflow-x-scroll no-scrollbar">
               {{ person.name }}
             </div>
-            <div hlmBadge variant="secondary" class="w-24 justify-center webkit-center">
+            <div hlmBadge variant="secondary" class="w-24 px-2 justify-center webkit-center whitespace-nowrap overflow-x-scroll no-scrollbar">
               {{ person.totalAmount.toFixed(2) }}
             </div>
           </div>
@@ -110,7 +119,13 @@
              hlmCard>
           <div class="flex justify-start items-center flex-wrap gap-3">
             @for (amount of person.listOfAmounts; track amount.id) {
-              <input class="w-36" (input)="calculateBill()" [(ngModel)]="amount.amount" hlmInput type="number"/>
+              <div class="relative">
+                <input class="w-36" (input)="calculateBill()" [(ngModel)]="amount.amount" hlmInput type="number"/>
+                <button (click)="removeAmountInput(person.id, amount.id)" hlmBtn size="icon" variant="ghost"
+                        class="absolute top-[-8px] right-[-5px] w-4 h-auto">
+                  <hlm-icon size='sm' name="lucideCircleX"/>
+                </button>
+              </div>
             }
             <button (click)="addNewAmountInput(person.id)" hlmBtn size="icon" variant="outline">
               <hlm-icon size='sm' name="lucideCirclePlus"/>
@@ -120,7 +135,7 @@
       </div>
     }
     <div class="flex justify-center items-center gap-3">
-      <h3 class="font-extrabold">Total Bill: {{ totalBill }}</h3>
+      <h3 class="font-extrabold">Total Bill: {{ totalBill.toFixed(2) }}</h3>
     </div>
   </div>
 }
