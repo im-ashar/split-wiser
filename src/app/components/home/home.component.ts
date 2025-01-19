@@ -26,6 +26,7 @@ import {
 } from '@spartan-ng/ui-dialog-helm';
 import {BrnSelectImports} from '@spartan-ng/brain/select';
 import {HlmSelectImports} from '@spartan-ng/ui-select-helm';
+import {HlmSwitchComponent} from '@spartan-ng/ui-switch-helm';
 
 @Component({
   selector: 'home-component',
@@ -58,6 +59,7 @@ import {HlmSelectImports} from '@spartan-ng/ui-select-helm';
     BrnSelectImports,
     HlmSelectImports,
     BrnDialogContentDirective,
+    HlmSwitchComponent
   ],
   providers: [provideIcons({lucideCheck, lucideChevronDown, lucideChevronUp, lucideCirclePlus, lucideCircleX})],
   templateUrl: './home.component.html',
@@ -76,6 +78,7 @@ export class HomeComponent {
   itemPrice: number | undefined;
   itemDiscount: number | undefined;
   discountOnTotalBill: number | undefined;
+  divideOnEach: boolean = true;
 
   generateNameInput(): void {
     if (this.numberOfPersons === undefined || this.numberOfPersons <= 1) {
@@ -110,9 +113,11 @@ export class HomeComponent {
   generateAvatar(userName: string): string {
     return `https://avatar.iran.liara.run/public/boy?username=${userName}`;
   }
+
   capitalizeName(name: string): string {
     return name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
   }
+
   verifyInputs(): void {
     this.inputPersons.forEach(person => {
       person.name = this.capitalizeName(person.name.trim());
@@ -121,6 +126,7 @@ export class HomeComponent {
     const uniqueNames = new Set(names);
     this.enableGenerateCardButton = names.length === uniqueNames.size && names.every(name => name !== '');
   }
+
   addNewAmountInput(id: number): void {
     const person = this.persons.find(p => p.id === id);
     if (person) {
@@ -164,6 +170,7 @@ export class HomeComponent {
     this.itemDiscount = undefined;
     this.inputPersons = [];
     this.discountOnTotalBill = undefined;
+    this.divideOnEach = true;
   }
 
   selectAllPersons() {
@@ -179,7 +186,12 @@ export class HomeComponent {
             .map(person => [person.id, person])
         ).values()
       );
-      let amountPerPerson = Number((this.itemPrice / this.selectedPersons.length).toFixed(2));
+      let amountPerPerson = 0;
+      if (this.divideOnEach) {
+        amountPerPerson = Number((this.itemPrice / this.selectedPersons.length).toFixed(2));
+      } else {
+        amountPerPerson = this.itemPrice;
+      }
       const discountPercentageOnItem = this.itemDiscount && this.itemDiscount > 0 ? this.itemDiscount : 0;
       amountPerPerson -= amountPerPerson * (discountPercentageOnItem / 100);
       this.selectedPersons.forEach(person => {
@@ -189,10 +201,11 @@ export class HomeComponent {
           personToUpdate.totalAmount += amountPerPerson;
         }
       });
-      this.totalBill += this.itemPrice;
+      this.totalBill = this.persons.reduce((sum, person) => sum + person.totalAmount, 0);
       this.itemPrice = undefined;
       this.itemDiscount = undefined;
       this.selectedPersons = []
+      this.divideOnEach = true;
     }
   }
 
