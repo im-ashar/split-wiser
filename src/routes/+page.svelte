@@ -29,6 +29,7 @@
 	import PersonBillCard from '$lib/components/split/person-bill-card.svelte';
 	import BillConfigurationCard from '$lib/components/split/bill-configuration-card.svelte';
 	import GrandTotalCard from '$lib/components/split/grand-total-card.svelte';
+	import ScanReceiptDialog from '$lib/components/scan/scan-receipt-dialog.svelte';
 	import { buildExpensePayload } from '$lib/split/build-expense-payload';
 	import type {
 		ApiEnvelope
@@ -75,6 +76,7 @@
 	let multiItemOpen = $state(false);
 	let nonGroupOpen = $state(false);
 	let descriptionOpen = $state(false);
+	let scanOpen = $state(false);
 	let nonGroupSharesOpen = $state(false);
 	let nonGroupShares = $state<{ name: string; amount: number }[]>([]);
 	let posting = $state(false);
@@ -301,6 +303,7 @@
 		<BillConfigurationCard
 			onOpenMultiItem={() => (multiItemOpen = true)}
 			onOpenAddNonGroup={() => (nonGroupOpen = true)}
+			onOpenScan={() => (scanOpen = true)}
 		/>
 
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -345,4 +348,8 @@
 	bind:open={nonGroupSharesOpen}
 	onOpenChange={(v) => (nonGroupSharesOpen = v)}
 	shares={nonGroupShares}
+/>
+<ScanReceiptDialog
+	bind:open={scanOpen}
+	onOpenChange={(v) => (scanOpen = v)}
 />

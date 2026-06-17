@@ -9,7 +9,7 @@
 		onOpenChange?: (open: boolean) => void;
 		title?: string;
 		description?: string;
-		size?: 'sm' | 'md' | 'lg';
+		size?: 'sm' | 'md' | 'lg' | 'xl';
 		class?: string;
 		children?: Snippet;
 		footer?: Snippet;
@@ -30,7 +30,8 @@
 		{
 			sm: 'max-w-md',
 			md: 'max-w-xl',
-			lg: 'max-w-3xl'
+			lg: 'max-w-3xl',
+			xl: 'max-w-6xl'
 		}[size]
 	);
 </script>
@@ -42,7 +43,7 @@
 		/>
 		<Bits.Content
 			class={cn(
-				'fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-0 rounded-xl border border-default bg-surface text-fg shadow-token-lg duration-200',
+				'fixed left-[50%] top-[50%] z-50 grid max-h-[92vh] w-full translate-x-[-50%] translate-y-[-50%] grid-rows-[auto_1fr_auto] gap-0 overflow-hidden rounded-xl border border-default bg-surface text-fg shadow-token-lg duration-200',
 				'data-[state=open]:animate-in data-[state=closed]:animate-out',
 				'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
 				'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
@@ -60,7 +61,7 @@
 					{/if}
 				</header>
 			{/if}
-			<div class="px-6 py-5">
+			<div class="overflow-y-auto px-6 py-5">
 				{@render children?.()}
 			</div>
 			{#if footer}

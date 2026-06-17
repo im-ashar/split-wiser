@@ -16,8 +16,13 @@
 
 	let {
 		onOpenMultiItem,
-		onOpenAddNonGroup
-	}: { onOpenMultiItem: () => void; onOpenAddNonGroup: () => void } = $props();
+		onOpenAddNonGroup,
+		onOpenScan
+	}: {
+		onOpenMultiItem: () => void;
+		onOpenAddNonGroup: () => void;
+		onOpenScan: () => void;
+	} = $props();
 </script>
 
 <Card>
@@ -72,7 +77,7 @@
 				<UserPlus class="size-4" />
 				Add non-group person
 			</Button>
-			<Button variant="secondary" size="sm" href="/scan">
+			<Button variant="secondary" size="sm" onclick={onOpenScan}>
 				<ScanLine class="size-4" />
 				Scan receipt
 			</Button>
