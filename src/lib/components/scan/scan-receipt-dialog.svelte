@@ -14,6 +14,8 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Clipboard from '@lucide/svelte/icons/clipboard';
 	import Settings2 from '@lucide/svelte/icons/settings-2';
+	import ImageIcon from '@lucide/svelte/icons/image';
+	import X from '@lucide/svelte/icons/x';
 	import { splitStore } from '$lib/stores/split-store.svelte';
 	import { toNetForBill, type GstSettings } from '$lib/scan/gst';
 	import type { ApiEnvelope } from '$lib/server/respond';
@@ -240,42 +242,61 @@
 			description="Pick a Splitwise group + members on the Home page (or use Manual entry), then come back to scan."
 		/>
 	{:else if stage === 'idle' || stage === 'extracting'}
-		<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-			<div class="flex flex-col gap-3">
-				<ReceiptUploader
-					disabled={stage === 'extracting'}
-					onPick={handlePick}
-				/>
-				<div class="flex items-center justify-between rounded-md border border-default bg-surface-muted px-3 py-2 text-xs">
-					<div class="text-fg-muted">
-						Tip: paste a screenshot with
-						<kbd class="rounded border border-default bg-surface px-1.5 py-0.5 font-mono text-[10px]">Ctrl</kbd>
-						<span class="text-fg-subtle">+</span>
-						<kbd class="rounded border border-default bg-surface px-1.5 py-0.5 font-mono text-[10px]">V</kbd>
-					</div>
-					<Button variant="ghost" size="sm" onclick={pasteFromButton}>
-						<Clipboard class="size-3.5" />
-						Paste image
-					</Button>
-				</div>
-			</div>
-
-			{#if previewUrl}
+		<div class="flex flex-col gap-4">
+			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+				<!-- Upload column -->
 				<div class="flex flex-col gap-3">
-					<div class="overflow-hidden rounded-xl border border-default bg-surface-muted">
-						<img
-							src={previewUrl}
-							alt="Selected receipt"
-							class="max-h-80 w-full object-contain"
-						/>
-					</div>
-					<div class="flex flex-wrap items-center justify-between gap-2">
-						<div class="text-xs text-fg-muted">
-							{pickedFile?.name ?? 'pasted image'} · {pickedFile ? (pickedFile.size / 1_000_000).toFixed(1) : '0'} MB
+					<ReceiptUploader
+						disabled={stage === 'extracting'}
+						onPick={handlePick}
+						class="min-h-[20rem]"
+					/>
+					<div class="flex items-center justify-between rounded-md border border-default bg-surface-muted px-3 py-2 text-xs">
+						<div class="text-fg-muted">
+							Tip: paste a screenshot with
+							<kbd class="rounded border border-default bg-surface px-1.5 py-0.5 font-mono text-[10px]">Ctrl</kbd>
+							<span class="text-fg-subtle">+</span>
+							<kbd class="rounded border border-default bg-surface px-1.5 py-0.5 font-mono text-[10px]">V</kbd>
 						</div>
-						<div class="flex gap-2">
+						<Button variant="ghost" size="sm" onclick={pasteFromButton}>
+							<Clipboard class="size-3.5" />
+							Paste image
+						</Button>
+					</div>
+				</div>
+
+				<!-- Preview column — always present so layout doesn't jump -->
+				<div class="flex flex-col gap-3">
+					<div
+						class="flex min-h-[20rem] items-center justify-center overflow-hidden rounded-xl border border-default bg-surface-muted p-3"
+					>
+						{#if previewUrl}
+							<img
+								src={previewUrl}
+								alt="Selected receipt"
+								class="max-h-[18rem] w-full object-contain"
+							/>
+						{:else}
+							<div class="flex flex-col items-center gap-2 px-6 py-10 text-center">
+								<ImageIcon class="size-8 text-fg-subtle" aria-hidden="true" />
+								<p class="text-sm font-medium text-fg-muted">
+									Your receipt preview will appear here
+								</p>
+								<p class="text-xs text-fg-subtle">
+									Choose, photograph, or paste an image to begin.
+								</p>
+							</div>
+						{/if}
+					</div>
+					<div
+						class="flex h-10 items-center justify-between rounded-md border border-default bg-surface-muted px-3 text-xs"
+					>
+						{#if pickedFile}
+							<span class="truncate text-fg-muted">
+								{pickedFile.name} · {(pickedFile.size / 1_000_000).toFixed(1)} MB
+							</span>
 							<Button
-								variant="secondary"
+								variant="ghost"
 								size="sm"
 								onclick={() => {
 									revokePreview();
@@ -283,27 +304,22 @@
 								}}
 								disabled={stage === 'extracting'}
 							>
+								<X class="size-3.5" />
 								Remove
 							</Button>
-							<Button
-								onclick={extract}
-								loading={stage === 'extracting'}
-								disabled={!pickedFile}
-							>
-								<Sparkles class="size-4" />
-								Extract items
-							</Button>
-						</div>
+						{:else}
+							<span class="text-fg-subtle">No image selected.</span>
+						{/if}
 					</div>
+				</div>
+			</div>
+
+			{#if extractError}
+				<div class="rounded-md border border-default bg-danger-soft px-3 py-2 text-sm text-danger">
+					{extractError}
 				</div>
 			{/if}
 		</div>
-
-		{#if extractError}
-			<div class="mt-4 rounded-md border border-default bg-danger-soft px-3 py-2 text-sm text-danger">
-				{extractError}
-			</div>
-		{/if}
 	{:else if stage === 'review' && scanResult}
 		<div class="flex flex-col gap-4">
 			<!-- Top strip: receipt thumbnail + GST panel side-by-side -->
@@ -392,15 +408,14 @@
 			</Button>
 		{:else}
 			<Button variant="ghost" onclick={close}>Cancel</Button>
-			{#if pickedFile}
-				<Button
-					onclick={extract}
-					loading={stage === 'extracting'}
-				>
-					<Sparkles class="size-4" />
-					Extract items
-				</Button>
-			{/if}
+			<Button
+				onclick={extract}
+				loading={stage === 'extracting'}
+				disabled={!pickedFile}
+			>
+				<Sparkles class="size-4" />
+				Extract items
+			</Button>
 		{/if}
 	{/snippet}
 </Dialog>

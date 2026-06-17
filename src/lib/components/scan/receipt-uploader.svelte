@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { cn } from '$lib/utils/cn';
+	import Button from '$lib/components/ui/button.svelte';
 	import Upload from '@lucide/svelte/icons/upload';
 	import Camera from '@lucide/svelte/icons/camera';
 
@@ -62,24 +63,14 @@
 	</div>
 
 	<div class="mt-1 flex flex-wrap gap-2">
-		<button
-			type="button"
-			class="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-fg transition-colors hover:bg-primary-hover disabled:opacity-50"
-			onclick={() => inputEl?.click()}
-			{disabled}
-		>
+		<Button variant="primary" size="md" onclick={() => inputEl?.click()} {disabled}>
 			<Upload class="size-4" />
 			Choose file
-		</button>
-		<button
-			type="button"
-			class="inline-flex h-10 items-center gap-2 rounded-md border border-default bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-muted disabled:opacity-50"
-			onclick={() => cameraEl?.click()}
-			{disabled}
-		>
+		</Button>
+		<Button variant="secondary" size="md" onclick={() => cameraEl?.click()} {disabled}>
 			<Camera class="size-4" />
 			Use camera
-		</button>
+		</Button>
 	</div>
 
 	{#if hint}
