@@ -11,6 +11,7 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import UserPlus from '@lucide/svelte/icons/user-plus';
 	import Calculator from '@lucide/svelte/icons/calculator';
+	import ScanLine from '@lucide/svelte/icons/scan-line';
 	import { splitStore } from '$lib/stores/split-store.svelte';
 
 	let {
@@ -70,6 +71,10 @@
 			<Button variant="secondary" size="sm" onclick={onOpenAddNonGroup}>
 				<UserPlus class="size-4" />
 				Add non-group person
+			</Button>
+			<Button variant="secondary" size="sm" href="/scan">
+				<ScanLine class="size-4" />
+				Scan receipt
 			</Button>
 		</div>
 	</CardContent>
