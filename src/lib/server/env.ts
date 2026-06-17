@@ -3,7 +3,8 @@ import {
 	SPLITWISE_CLIENT_SECRET,
 	SPLITWISE_REDIRECT_URI,
 	SESSION_COOKIE_SECRET,
-	GEMINI_API_KEY
+	HF_TOKEN,
+	HF_MODEL
 } from '$env/static/private';
 import { PUBLIC_APP_URL } from '$env/static/public';
 
@@ -27,5 +28,6 @@ export const env = {
 	splitwiseRedirectUri: required('SPLITWISE_REDIRECT_URI', SPLITWISE_REDIRECT_URI),
 	sessionCookieSecret: required('SESSION_COOKIE_SECRET', SESSION_COOKIE_SECRET),
 	publicAppUrl: PUBLIC_APP_URL || 'http://localhost:5173',
-	geminiApiKey: optional(GEMINI_API_KEY)
+	hfToken: optional(HF_TOKEN),
+	hfModel: optional(HF_MODEL) ?? 'meta-llama/Llama-3.2-11B-Vision-Instruct'
 } as const;

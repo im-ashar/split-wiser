@@ -6,9 +6,9 @@
 	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import ReceiptUploader from '$lib/components/scan/receipt-uploader.svelte';
 	import GstPanel from '$lib/components/scan/gst-panel.svelte';
-	import ItemsTable, {
+	import ItemsList, {
 		type ScanItemRow
-	} from '$lib/components/scan/items-table.svelte';
+	} from '$lib/components/scan/items-list.svelte';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -306,69 +306,77 @@
 		{/if}
 	{:else if stage === 'review' && scanResult}
 		<div class="flex flex-col gap-4">
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-				<div class="flex flex-col gap-3 lg:col-span-1">
+			<!-- Top strip: receipt thumbnail + GST panel side-by-side -->
+			<div class="grid grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
+				<div class="flex flex-col gap-2">
 					<div class="overflow-hidden rounded-xl border border-default bg-surface-muted">
 						{#if previewUrl}
 							<img
 								src={previewUrl}
 								alt="Scanned receipt"
-								class="max-h-[24rem] w-full object-contain"
+								class="max-h-72 w-full object-contain"
 							/>
 						{/if}
 					</div>
 					{#if scanResult.subtotal != null || scanResult.total != null}
-						<div class="rounded-md border border-default px-3 py-2 text-xs text-fg-muted">
-							{#if scanResult.subtotal != null}Subtotal {scanResult.subtotal.toFixed(2)}{/if}
-							{#if scanResult.total != null}{#if scanResult.subtotal != null} · {/if}Total {scanResult.total.toFixed(2)}{/if}
-							{#if scanResult.currency}{' '}{scanResult.currency}{/if}
+						<div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-default px-3 py-2 font-mono text-xs text-fg-muted">
+							{#if scanResult.subtotal != null}
+								<span>Subtotal <span class="text-fg">{scanResult.subtotal.toFixed(2)}</span></span>
+							{/if}
+							{#if scanResult.total != null}
+								<span>Total <span class="text-fg">{scanResult.total.toFixed(2)}</span></span>
+							{/if}
+							{#if scanResult.currency}
+								<span class="ml-auto rounded-full bg-surface-muted px-2 py-0.5 text-[10px] uppercase tracking-wide">
+									{scanResult.currency}
+								</span>
+							{/if}
 						</div>
 					{/if}
 				</div>
 
-				<div class="flex flex-col gap-4 lg:col-span-2">
-					<GstPanel
-						applyGst={applyGst}
-						detected={detectedGst}
-						settings={gstSettings}
-						onChange={(next) => {
-							applyGst = next.applyGst;
-							gstSettings = next.settings;
-						}}
-					/>
+				<GstPanel
+					applyGst={applyGst}
+					detected={detectedGst}
+					settings={gstSettings}
+					onChange={(next) => {
+						applyGst = next.applyGst;
+						gstSettings = next.settings;
+					}}
+				/>
+			</div>
 
-					<div class="flex flex-col gap-3">
-						<div class="flex items-end justify-between gap-3">
-							<div>
-								<h3 class="font-semibold text-fg">Items</h3>
-								<p class="text-xs text-fg-muted">
-									Edit if needed, then assign each item to people.
-								</p>
-							</div>
-							<label class="flex flex-col items-end text-right text-xs">
-								<span class="uppercase tracking-wide text-fg-muted">Currency</span>
-								<select
-									class="mt-1 inline-flex h-9 items-center rounded-md border border-default bg-surface-muted px-2 text-sm focus-visible:outline-none focus-visible:border-primary"
-									value={currency}
-									onchange={(e) =>
-										(currency = (e.currentTarget as HTMLSelectElement).value)}
-								>
-									{#each ['PKR', 'USD', 'EUR', 'GBP', 'INR', 'AED', 'SAR'] as c (c)}
-										<option value={c}>{c}</option>
-									{/each}
-								</select>
-							</label>
-						</div>
-
-						<ItemsTable
-							items={items}
-							persons={persons}
-							gst={{ applyGst, settings: gstSettings }}
-							{currency}
-							onItemsChange={(next) => (items = next)}
-						/>
+			<!-- Full-width items section -->
+			<div class="flex flex-col gap-3">
+				<div class="flex items-end justify-between gap-3">
+					<div>
+						<h3 class="font-semibold text-fg">Items</h3>
+						<p class="text-xs text-fg-muted">
+							Edit if needed, then assign each item to the people who shared it.
+						</p>
 					</div>
+					<label class="flex flex-col items-end text-right text-xs">
+						<span class="uppercase tracking-wide text-fg-muted">Currency</span>
+						<select
+							class="mt-1 inline-flex h-9 items-center rounded-md border border-default bg-surface-muted px-2 text-sm focus-visible:outline-none focus-visible:border-primary"
+							value={currency}
+							onchange={(e) =>
+								(currency = (e.currentTarget as HTMLSelectElement).value)}
+						>
+							{#each ['PKR', 'USD', 'EUR', 'GBP', 'INR', 'AED', 'SAR'] as c (c)}
+								<option value={c}>{c}</option>
+							{/each}
+						</select>
+					</label>
 				</div>
+
+				<ItemsList
+					items={items}
+					persons={persons}
+					gst={{ applyGst, settings: gstSettings }}
+					{currency}
+					onItemsChange={(next) => (items = next)}
+				/>
 			</div>
 		</div>
 	{/if}
