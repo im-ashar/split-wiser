@@ -405,37 +405,37 @@
 						gstSettings = next.settings;
 					}}
 				/>
+			</div>
 
-				<!-- Bill-level discount -->
-				<div
-					class="flex flex-col gap-3 rounded-xl border border-default bg-surface p-4 sm:flex-row sm:items-center sm:gap-4"
-				>
-					<div class="flex items-start gap-3 sm:flex-1">
-						<div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-success-soft text-success">
-							<DiscountIcon class="size-4" />
-						</div>
-						<div class="flex flex-1 flex-col gap-1">
-							<div class="flex flex-wrap items-center gap-2">
-								<span class="text-sm font-semibold text-fg">Bill discount</span>
-								{#if billDiscountPct > 0 && billDiscount.unit === 'pct' && billDiscount.value === billDiscountPct}
-									<span class="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">
-										<Sparkles class="size-3" /> Detected
-									</span>
-								{/if}
-							</div>
-							<p class="text-xs text-fg-muted">
-								Applied to the whole bill after all items are totalled. Toggle % or {currency} as needed.
-							</p>
-						</div>
+			<!-- Bill-level discount — full width below the receipt + GST row -->
+			<div
+				class="flex flex-col gap-3 rounded-xl border border-default bg-surface p-4 sm:flex-row sm:items-center sm:gap-4"
+			>
+				<div class="flex items-start gap-3 sm:flex-1">
+					<div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-success-soft text-success">
+						<DiscountIcon class="size-4" />
 					</div>
-					<div class="w-full sm:w-52 sm:shrink-0">
-						<DiscountInput
-							value={billDiscount}
-							{currency}
-							ariaLabel="Bill discount"
-							onChange={(next) => (billDiscount = next)}
-						/>
+					<div class="flex flex-1 flex-col gap-1">
+						<div class="flex flex-wrap items-center gap-2">
+							<span class="text-sm font-semibold text-fg">Bill discount</span>
+							{#if billDiscountPct > 0 && billDiscount.unit === 'pct' && billDiscount.value === billDiscountPct}
+								<span class="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">
+									<Sparkles class="size-3" /> Detected
+								</span>
+							{/if}
+						</div>
+						<p class="text-xs text-fg-muted">
+							Applied to the whole bill after all items are totalled. Toggle % or {currency} as needed.
+						</p>
 					</div>
+				</div>
+				<div class="w-full sm:w-52 sm:shrink-0">
+					<DiscountInput
+						value={billDiscount}
+						{currency}
+						ariaLabel="Bill discount"
+						onChange={(next) => (billDiscount = next)}
+					/>
 				</div>
 			</div>
 
