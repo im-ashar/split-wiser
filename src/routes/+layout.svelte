@@ -2,9 +2,12 @@
 	import '../app.css';
 	import Navbar from '$lib/components/navbar.svelte';
 	import Toaster from '$lib/components/ui/toaster.svelte';
+	import NavProgress from '$lib/components/ui/nav-progress.svelte';
 
 	let { children } = $props();
 </script>
+
+<NavProgress />
 
 <div class="flex min-h-dvh flex-col bg-bg">
 	<Navbar />
