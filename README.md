@@ -1,59 +1,58 @@
-# SplitWiser
+# Split-Wiser
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.6.
+The SvelteKit + TypeScript implementation of Split-Wiser — a calculator-style web app that posts itemised, GST/discount-aware expenses to [Splitwise](https://www.splitwise.com/).
 
-## Development server
+## Stack
 
-To start a local development server, run:
+- [SvelteKit 2](https://kit.svelte.dev/) on [Svelte 5](https://svelte.dev/) (runes)
+- TypeScript strict, [Tailwind v4](https://tailwindcss.com/), [bits-ui](https://bits-ui.com/), [@lucide/svelte](https://lucide.dev/)
+- [`splitwise-ts`](docs/getting-started.md) used **server-side only**
+- Deploy: [`@sveltejs/adapter-netlify`](https://kit.svelte.dev/docs/adapter-netlify) (server endpoints become Netlify Functions automatically)
 
-```bash
-ng serve
-```
+See [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md) for the full picture.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Local setup
 
-## Code scaffolding
+1. Install deps:
+   ```sh
+   npm install
+   ```
+2. Copy env template and fill in values:
+   ```sh
+   cp .env.example .env
+   ```
+   Required:
+   - `SPLITWISE_CLIENT_ID`, `SPLITWISE_CLIENT_SECRET` from <https://secure.splitwise.com/oauth_clients>
+   - `SPLITWISE_REDIRECT_URI` — `http://localhost:5173/auth/callback` for dev
+   - `SESSION_COOKIE_SECRET` — generate with `openssl rand -base64 32`
+3. Register **both** redirect URIs in your Splitwise app:
+   - `http://localhost:5173/auth/callback`
+   - `https://<your-site>.netlify.app/auth/callback`
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Scripts
 
-```bash
-ng generate component component-name
-```
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server on <http://localhost:5173> |
+| `npm run build` | Production build via `adapter-netlify` |
+| `npm run preview` | Preview the built app |
+| `npm run check` | `svelte-check` (type-check) |
+| `npm run test` | Vitest unit + component tests |
+| `npm run test:watch` | Vitest in watch mode |
+| `npm run test:e2e` | Playwright smoke (run `npx playwright install` first) |
+| `npm run lint` | Prettier + ESLint check |
+| `npm run format` | Prettier write |
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Deployment
 
-```bash
-ng generate --help
-```
+[`netlify.toml`](netlify.toml) is configured to build with `npm ci && npm run build` and publish from `build/`. The Netlify adapter auto-registers `+server.ts` / `+page.server.ts` files as functions — there's nothing to set up beyond pushing a branch and adding env vars in the Netlify dashboard.
 
-## Building
+## Verifying the math
 
-To build the project run:
+The bill-splitting math is locked behind unit tests in [src/lib/split/](src/lib/split/):
 
-```bash
-ng build
-```
+- [calculate-totals.test.ts](src/lib/split/calculate-totals.test.ts) — GST + discount math
+- [build-expense-payload.test.ts](src/lib/split/build-expense-payload.test.ts) — payload shape and the rounding-discrepancy fix on the payer's owed share
+- [split-multi-person-item.test.ts](src/lib/split/split-multi-person-item.test.ts) — even split, replicate, item-level discount, dedup
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Run `npm run test` — all should pass before deploying.

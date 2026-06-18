@@ -1,0 +1,14 @@
+[build]
+  command = "npm ci && npm run build"
+  publish = "build"
+
+# `@sveltejs/adapter-netlify` writes function definitions and redirects into
+# the build output automatically — do not duplicate them here.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
