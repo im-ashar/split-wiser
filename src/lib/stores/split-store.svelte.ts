@@ -4,6 +4,7 @@ import type {
 	SplitwiseMember
 } from '$lib/types/splitwise';
 import { calculateTotals } from '$lib/split/calculate-totals';
+import type { DiscountValue } from '$lib/split/discount';
 
 function makeStore() {
 	let persons = $state<Person[]>([]);
@@ -11,7 +12,7 @@ function makeStore() {
 	let selectedGroupMembers = $state<SplitwiseMember[]>([]);
 	let selectedPayer = $state<SplitwiseMember | null>(null);
 	let gstPercentage = $state<number | undefined>(undefined);
-	let discountOnTotalBill = $state<number | undefined>(undefined);
+	let discountOnTotalBill = $state<DiscountValue | undefined>(undefined);
 	let showBillCards = $state(false);
 
 	const totals = $derived(
@@ -148,7 +149,7 @@ function makeStore() {
 		get discountOnTotalBill() {
 			return discountOnTotalBill;
 		},
-		set discountOnTotalBill(v: number | undefined) {
+		set discountOnTotalBill(v: DiscountValue | undefined) {
 			discountOnTotalBill = v;
 			recompute();
 		},

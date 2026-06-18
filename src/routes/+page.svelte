@@ -65,8 +65,9 @@
 		})
 	);
 
+	// Payer can be anyone in the full group — they may have paid but not eaten.
 	const payerOptions = $derived<SelectOption<SplitwiseMember>[]>(
-		splitStore.selectedGroupMembers.map((m) => ({
+		(splitStore.selectedGroup?.members ?? []).map((m) => ({
 			label: `${m.first_name} ${m.last_name ?? ''}`.trim(),
 			value: m
 		}))
@@ -244,32 +245,38 @@
 					</div>
 
 					{#if splitStore.selectedGroup}
-						<div class="flex flex-col gap-2">
-							<Label class="flex items-center gap-2">
-								<UserCheck class="size-4 text-success" />
-								Select members
-							</Label>
-							<MultiSelect
-								options={memberOptions}
-								value={splitStore.selectedGroupMembers}
-								placeholder="👥 Select members for this bill"
-								emptyText="No members in this group."
-								onValueChange={(v) => (splitStore.selectedGroupMembers = v)}
-							/>
-						</div>
-					{/if}
-
-					{#if splitStore.selectedGroupMembers.length > 0}
+						<!-- Who paid — anyone from the full group, regardless of who ate -->
 						<div class="flex flex-col gap-2">
 							<Label class="flex items-center gap-2">
 								<Wallet class="size-4 text-warning" />
 								Who paid?
 							</Label>
+							<p class="text-xs text-fg-muted">
+								Select whoever settled the bill — even if they didn't eat.
+							</p>
 							<Select
 								options={payerOptions}
 								value={splitStore.selectedPayer}
 								placeholder="💳 Select who paid"
 								onValueChange={(v) => (splitStore.selectedPayer = v ?? null)}
+							/>
+						</div>
+
+						<!-- Who ate — the people who actually consumed and get bill cards -->
+						<div class="flex flex-col gap-2">
+							<Label class="flex items-center gap-2">
+								<UserCheck class="size-4 text-success" />
+								Who participated?
+							</Label>
+							<p class="text-xs text-fg-muted">
+								Select everyone who shared the bill. This creates their amount cards below.
+							</p>
+							<MultiSelect
+								options={memberOptions}
+								value={splitStore.selectedGroupMembers}
+								placeholder="👥 Select who ate / participated"
+								emptyText="No members in this group."
+								onValueChange={(v) => (splitStore.selectedGroupMembers = v)}
 							/>
 						</div>
 					{/if}

@@ -1,6 +1,8 @@
 export interface AmountRow {
 	id: number;
 	amount: number | undefined;
+	/** When true, bill-level GST is not applied to this row. */
+	noGst?: boolean;
 }
 
 export interface Person {

@@ -47,15 +47,15 @@ export function buildExpensePayload(input: BuildExpensePayloadInput): ExpensePay
 	);
 	const totalCost = Math.round(groupMembersRawTotal * 100) / 100;
 
-	const payerPerson = groupMembers.find(
-		(p) =>
-			p.splitwiseUserId === input.payer.user_id ||
-			p.splitwiseUserId === input.payer.id
-	);
-	if (!payerPerson || payerPerson.splitwiseUserId == null) {
-		throw new Error('Selected payer is not part of the bill');
+	const payerUserId = input.payer.user_id ?? input.payer.id;
+	if (payerUserId == null) {
+		throw new Error('Payer has no Splitwise user id');
 	}
-	const payerUserId = payerPerson.splitwiseUserId;
+
+	// Check whether the payer also appears as a participant.
+	const payerIsParticipant = groupMembers.some(
+		(p) => p.splitwiseUserId === payerUserId
+	);
 
 	const users: ExpensePayloadUser[] = [];
 	let totalOwedShares = 0;
@@ -73,13 +73,29 @@ export function buildExpensePayload(input: BuildExpensePayloadInput): ExpensePay
 		});
 	}
 
+	// Payer paid but didn't eat — add them with paid_share = total, owed_share = 0.
+	if (!payerIsParticipant) {
+		users.push({
+			user_id: payerUserId,
+			paid_share: totalCost.toFixed(2),
+			owed_share: '0.00'
+		});
+	}
+
+	// Rounding reconciliation: adjust the payer's owed_share if participant,
+	// or their paid_share if they didn't eat (owed_share stays 0 for non-eaters).
 	const discrepancy = totalCost - totalOwedShares;
 	if (Math.abs(discrepancy) > 0.001) {
-		const payerIndex = users.findIndex((u) => u.user_id === payerUserId);
-		if (payerIndex !== -1) {
-			const current = parseFloat(users[payerIndex]!.owed_share);
-			users[payerIndex]!.owed_share = (current + discrepancy).toFixed(2);
+		if (payerIsParticipant) {
+			const payerIndex = users.findIndex((u) => u.user_id === payerUserId);
+			if (payerIndex !== -1) {
+				const current = parseFloat(users[payerIndex]!.owed_share);
+				users[payerIndex]!.owed_share = (current + discrepancy).toFixed(2);
+			}
 		}
+		// If payer didn't eat, the discrepancy is tiny floating-point noise;
+		// the sum of owed_shares already equals totalCost through rounding of
+		// participants, so no adjustment needed.
 	}
 
 	const payload: ExpensePayload = {

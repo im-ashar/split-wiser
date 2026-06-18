@@ -73,15 +73,18 @@
 			onValueChange?.(opt.value);
 		}
 	}
+
+	let open = $state(false);
 </script>
 
 <Combobox.Root
 	type="single"
+	bind:open
 	value={selectedKey}
 	onValueChange={handleChange}
 	{disabled}
-	onOpenChange={(open) => {
-		if (!open) search = '';
+	onOpenChange={(o) => {
+		if (!o) search = '';
 	}}
 >
 	<div class={cn('relative flex h-10 w-full items-center', className)}>
@@ -93,6 +96,8 @@
 				'disabled:cursor-not-allowed disabled:opacity-50'
 			)}
 			oninput={(e) => (search = (e.currentTarget as HTMLInputElement).value)}
+			onfocus={() => (open = true)}
+			onclick={() => (open = true)}
 			{placeholder}
 			defaultValue={selectedLabel}
 			aria-label={placeholder}

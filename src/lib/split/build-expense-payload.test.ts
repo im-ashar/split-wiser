@@ -80,16 +80,25 @@ describe('buildExpensePayload', () => {
 		expect(aliRow.paid_share).toBe('100.00');
 	});
 
-	it('throws when the payer is not in the bill', () => {
-		const stranger = member(99, 'Stranger');
-		expect(() =>
-			buildExpensePayload({
-				persons: [person(1, 'Ali', 100, 1)],
-				payer: stranger,
-				group,
-				description: 'Dinner'
-			})
-		).toThrow();
+	it('allows payer who is not a participant (paid but did not eat)', () => {
+		// Payer id=99 is not in persons; should be added with paid_share=total, owed_share=0.
+		const sponsor = member(99, 'Sponsor');
+		const payload = buildExpensePayload({
+			persons: [person(1, 'Ali', 50, 1), person(2, 'Bea', 50, 2)],
+			payer: sponsor,
+			group,
+			description: 'Dinner'
+		});
+		expect(payload.cost).toBe('100.00');
+		// 3 users: Ali, Bea, and the non-eating payer
+		expect(payload.users).toHaveLength(3);
+		const sponsorRow = payload.users.find((u) => u.user_id === 99)!;
+		expect(sponsorRow.paid_share).toBe('100.00');
+		expect(sponsorRow.owed_share).toBe('0.00');
+		// Ali and Bea are not the payer
+		const aliRow = payload.users.find((u) => u.user_id === 1)!;
+		expect(aliRow.paid_share).toBe('0.00');
+		expect(aliRow.owed_share).toBe('50.00');
 	});
 
 	it('throws when there are no group members', () => {

@@ -6,6 +6,7 @@
 	import Input from '$lib/components/ui/input.svelte';
 	import Label from '$lib/components/ui/label.svelte';
 	import Button from '$lib/components/ui/button.svelte';
+	import DiscountInput from '$lib/components/ui/discount-input.svelte';
 	import Percent from '@lucide/svelte/icons/percent';
 	import Tag from '@lucide/svelte/icons/tag';
 	import Plus from '@lucide/svelte/icons/plus';
@@ -13,6 +14,7 @@
 	import Calculator from '@lucide/svelte/icons/calculator';
 	import ScanLine from '@lucide/svelte/icons/scan-line';
 	import { splitStore } from '$lib/stores/split-store.svelte';
+	import { discountAmount, type DiscountValue } from '$lib/split/discount';
 
 	let {
 		onOpenMultiItem,
@@ -23,6 +25,28 @@
 		onOpenAddNonGroup: () => void;
 		onOpenScan: () => void;
 	} = $props();
+
+	const ZERO_DISCOUNT: DiscountValue = { value: 0, unit: 'pct' };
+	const currentDiscount = $derived<DiscountValue>(
+		splitStore.discountOnTotalBill ?? ZERO_DISCOUNT
+	);
+
+	// What the discount is worth right now in currency, given current totals.
+	// Pre-discount subtotal = totalBill / factor; for a percentage it's
+	// totalBill / (1 - p/100); for an amount it's totalBill + amt. Either way
+	// `discountAmount(preDiscountTotal, current)` gives the value we save.
+	const savings = $derived.by(() => {
+		const d = currentDiscount;
+		if (!d || d.value <= 0) return 0;
+		const grandTotal = splitStore.totalBill;
+		if (grandTotal <= 0) return 0;
+		// Reverse the factor used in calculate-totals to find the pre-discount sum.
+		const preDiscount =
+			d.unit === 'pct'
+				? grandTotal / (1 - Math.min(99.9, d.value) / 100)
+				: grandTotal + d.value;
+		return discountAmount(preDiscount, d);
+	});
 </script>
 
 <Card>
@@ -54,17 +78,22 @@
 			<div class="flex flex-col gap-1.5">
 				<Label for="discount" class="flex items-center gap-2">
 					<Tag class="size-4 text-primary" />
-					Total discount %
+					Total discount
 				</Label>
-				<Input
+				<DiscountInput
 					id="discount"
-					type="number"
-					min="0"
-					max="100"
-					step="0.01"
+					value={currentDiscount}
+					ariaLabel="Total discount"
 					placeholder="e.g. 10"
-					bind:value={splitStore.discountOnTotalBill as number | undefined}
+					onChange={(next) =>
+						(splitStore.discountOnTotalBill = next.value > 0 ? next : undefined)}
 				/>
+				{#if savings > 0}
+					<p class="text-xs text-fg-muted">
+						You save <span class="font-mono text-success">−{savings.toFixed(2)}</span>
+						on the bill.
+					</p>
+				{/if}
 			</div>
 		</div>
 

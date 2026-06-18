@@ -16,15 +16,19 @@
 	import Settings2 from '@lucide/svelte/icons/settings-2';
 	import ImageIcon from '@lucide/svelte/icons/image';
 	import X from '@lucide/svelte/icons/x';
+	import DiscountIcon from '@lucide/svelte/icons/badge-percent';
 	import { splitStore } from '$lib/stores/split-store.svelte';
 	import { toNetForBill, type GstSettings } from '$lib/scan/gst';
+	import { applyDiscount, type DiscountValue } from '$lib/split/discount';
+	import DiscountInput from '$lib/components/ui/discount-input.svelte';
 	import type { ApiEnvelope } from '$lib/server/respond';
 
 	type ScanResult = {
-		items: Array<{ name: string; price: number }>;
+		items: Array<{ name: string; price: number; discountPct: number }>;
 		currency: string | null;
 		gstRate: number | null;
 		pricesInclude: 'gst' | 'no-gst' | 'unknown';
+		billDiscountPct: number;
 		subtotal: number | null;
 		total: number | null;
 	};
@@ -47,6 +51,8 @@
 	let gstSettings = $state<GstSettings>({ rate: 0, pricesInclude: false });
 	let currency = $state('PKR');
 	let items = $state<ScanItemRow[]>([]);
+	let billDiscountPct = $state(0); // raw % value detected by AI (used to flag the "Detected" badge)
+	let billDiscount = $state<DiscountValue>({ value: 0, unit: 'pct' });
 
 	const persons = $derived(splitStore.persons);
 	const hasPersons = $derived(persons.length > 0);
@@ -80,6 +86,8 @@
 		applyGst = false;
 		detectedGst = false;
 		gstSettings = { rate: 0, pricesInclude: false };
+		billDiscountPct = 0;
+		billDiscount = { value: 0, unit: 'pct' };
 		extractError = null;
 		stage = 'idle';
 	}
@@ -120,10 +128,14 @@
 		detectedGst = r.gstRate != null || r.pricesInclude !== 'unknown';
 		applyGst = rate > 0;
 		gstSettings = { rate, pricesInclude: inclusive };
+		billDiscountPct = r.billDiscountPct ?? 0;
+		billDiscount = { value: billDiscountPct, unit: 'pct' };
 		items = r.items.map((it, i) => ({
 			id: Date.now() + i,
 			name: it.name,
 			price: it.price,
+			discount: { value: it.discountPct ?? 0, unit: 'pct' },
+			excludeGst: false,
 			assigneeIds: [],
 			divide: true
 		}));
@@ -135,31 +147,64 @@
 			? gstSettings
 			: { rate: 0, pricesInclude: false };
 
-		const additions = new Map<number, number[]>();
+		// Map: personId → [{amount, noGst}]
+		const additions = new Map<number, Array<{ amount: number; noGst: boolean }>>();
+
 		for (const row of items) {
 			if (row.assigneeIds.length === 0 || !Number.isFinite(row.price) || row.price <= 0) continue;
-			const [netForRow] = toNetForBill([row.price], effectiveGst);
-			if (netForRow == null) continue;
-			const perPerson = row.divide ? netForRow / row.assigneeIds.length : netForRow;
+
+			// 1. Apply item-level discount (% or fixed amount).
+			const afterDiscount =
+				row.discount.value > 0
+					? Math.round(applyDiscount(row.price, row.discount) * 100) / 100
+					: row.price;
+
+			// 2. Convert to net so the bill-level GST reconstructs the correct gross.
+			//    For excluded items, push the discounted price as-is and mark noGst.
+			const net = row.excludeGst
+				? afterDiscount
+				: toNetForBill([afterDiscount], effectiveGst)[0] ?? afterDiscount;
+
+			const perPerson = row.divide ? net / row.assigneeIds.length : net;
 			const rounded = Math.round(perPerson * 100) / 100;
+
 			for (const pid of row.assigneeIds) {
 				const list = additions.get(pid) ?? [];
-				list.push(rounded);
+				list.push({ amount: rounded, noGst: row.excludeGst });
 				additions.set(pid, list);
 			}
 		}
 
-		for (const [pid, amounts] of additions.entries()) {
-			for (const a of amounts) {
+		for (const [pid, rows] of additions.entries()) {
+			for (const { amount, noGst } of rows) {
 				splitStore.addAmount(pid);
 				const person = splitStore.persons.find((p) => p.id === pid);
 				const lastRow = person?.listOfAmounts[person.listOfAmounts.length - 1];
-				if (lastRow) splitStore.setAmount(pid, lastRow.id, a);
+				if (lastRow) {
+					// Patch the noGst flag directly; setAmount only takes the numeric value.
+					splitStore.setAmount(pid, lastRow.id, amount);
+					if (noGst) {
+						// Mark the row so calculateTotals skips GST for it.
+						const p = splitStore.persons.find((x) => x.id === pid);
+						if (p) {
+							const rowIdx = p.listOfAmounts.findIndex((r) => r.id === lastRow.id);
+							if (rowIdx !== -1 && p.listOfAmounts[rowIdx]) {
+								p.listOfAmounts[rowIdx] = { ...p.listOfAmounts[rowIdx]!, noGst: true };
+								splitStore.recompute();
+							}
+						}
+					}
+				}
 			}
 		}
 
 		if (applyGst && gstSettings.rate > 0) {
 			splitStore.gstPercentage = gstSettings.rate;
+		}
+
+		// Apply bill-level discount if the user kept it.
+		if (billDiscount.value > 0) {
+			splitStore.discountOnTotalBill = billDiscount;
 		}
 
 		toast.success('Receipt applied to bill', {
@@ -360,6 +405,38 @@
 						gstSettings = next.settings;
 					}}
 				/>
+
+				<!-- Bill-level discount -->
+				<div
+					class="flex flex-col gap-3 rounded-xl border border-default bg-surface p-4 sm:flex-row sm:items-center sm:gap-4"
+				>
+					<div class="flex items-start gap-3 sm:flex-1">
+						<div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-success-soft text-success">
+							<DiscountIcon class="size-4" />
+						</div>
+						<div class="flex flex-1 flex-col gap-1">
+							<div class="flex flex-wrap items-center gap-2">
+								<span class="text-sm font-semibold text-fg">Bill discount</span>
+								{#if billDiscountPct > 0 && billDiscount.unit === 'pct' && billDiscount.value === billDiscountPct}
+									<span class="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">
+										<Sparkles class="size-3" /> Detected
+									</span>
+								{/if}
+							</div>
+							<p class="text-xs text-fg-muted">
+								Applied to the whole bill after all items are totalled. Toggle % or {currency} as needed.
+							</p>
+						</div>
+					</div>
+					<div class="w-full sm:w-52 sm:shrink-0">
+						<DiscountInput
+							value={billDiscount}
+							{currency}
+							ariaLabel="Bill discount"
+							onChange={(next) => (billDiscount = next)}
+						/>
+					</div>
+				</div>
 			</div>
 
 			<!-- Full-width items section -->
@@ -391,6 +468,7 @@
 					persons={persons}
 					gst={{ applyGst, settings: gstSettings }}
 					{currency}
+					billDiscount={billDiscount}
 					onItemsChange={(next) => (items = next)}
 				/>
 			</div>

@@ -7,18 +7,20 @@ import { UpstreamError } from './errors';
 // See https://huggingface.co/docs/inference-providers
 const HF_URL = 'https://router.huggingface.co/v1/chat/completions';
 
-const SYSTEM_INSTRUCTIONS = `You read photos of receipts and bills. Extract every line item the customer was actually charged for and the totals printed on the receipt.
+const SYSTEM_INSTRUCTIONS = `You read photos of receipts and bills. Extract every line item the customer was actually charged for, any discounts, and the totals printed on the receipt.
 
 RULES:
-- Each item must be a thing being purchased. Skip subtotal, total, GST/VAT/tax, service charge, tip, discount, change, and anything that is not a sellable line item.
-- "name" is the item description as printed (clean it up; if a quantity multiplier was printed like "2x Coffee 4.00", fold the quantity into the printed line price).
-- "price" is the displayed price for that line as printed on the receipt. Do NOT add or remove tax — return what is shown.
+- Each item must be a thing being purchased. Skip subtotal, total, GST/VAT/tax, service charge, tip, change, and anything that is not a sellable line item.
+- "name" is the item description as printed (clean it up; fold quantity multipliers into the line price).
+- "price" is the displayed price for that line as printed. Do NOT add or remove tax — return what is shown.
+- "discountPct" is a percentage discount printed against that specific line item (e.g. "10% off" next to an item). Use 0 if none.
 - "currency" is the ISO-4217 code if visible (USD, EUR, PKR, INR, GBP, AED, etc.). Use null if you cannot tell.
 - "gstRate" is the percentage rate (e.g. 18 for 18%) if a tax line names a rate. Use null if no rate is shown.
 - "pricesInclude":
     - "gst"      → if the receipt says "incl. GST", "tax included", "VAT inclusive", or similar.
     - "no-gst"   → if there is a separate GST/tax line summed on top of an itemised subtotal.
     - "unknown"  → if it is unclear or no tax is mentioned.
+- "billDiscountPct" is a percentage discount applied to the whole bill (e.g. "10% loyalty discount", "Happy Hour -15%"). Use 0 if none.
 - "subtotal" and "total" are the printed numbers if you can see them, else null.
 - If the image is not a receipt or you cannot read prices, return an empty items array.
 
@@ -26,10 +28,11 @@ Respond with ONLY a single JSON object. No prose, no markdown, no code fences.
 
 Schema:
 {
-  "items": [{ "name": string, "price": number }],
+  "items": [{ "name": string, "price": number, "discountPct": number }],
   "currency": string | null,
   "gstRate": number | null,
   "pricesInclude": "gst" | "no-gst" | "unknown",
+  "billDiscountPct": number,
   "subtotal": number | null,
   "total": number | null
 }`;
@@ -39,13 +42,15 @@ export const receiptScanSchema = z.object({
 		.array(
 			z.object({
 				name: z.string().min(1).max(120),
-				price: z.number().finite()
+				price: z.number().finite(),
+				discountPct: z.number().finite().min(0).max(100).optional().transform((v) => v ?? 0)
 			})
 		)
 		.max(200),
 	currency: z.string().nullish().transform((v) => v ?? null),
 	gstRate: z.number().finite().nullish().transform((v) => v ?? null),
 	pricesInclude: z.enum(['gst', 'no-gst', 'unknown']),
+	billDiscountPct: z.number().finite().min(0).max(100).optional().transform((v) => v ?? 0),
 	subtotal: z.number().finite().nullish().transform((v) => v ?? null),
 	total: z.number().finite().nullish().transform((v) => v ?? null)
 });

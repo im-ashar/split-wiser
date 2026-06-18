@@ -73,4 +73,46 @@ describe('calculateTotals', () => {
 		});
 		expect(r.persons[0]!.totalAmount).toBe(100);
 	});
+
+	it('skips GST for rows flagged noGst', () => {
+		const p: import('$lib/types/splitwise').Person = {
+			id: 1,
+			name: 'Ali',
+			totalAmount: 0,
+			listOfAmounts: [
+				{ id: 1, amount: 100 },           // GST applied → 118
+				{ id: 2, amount: 50, noGst: true } // GST skipped → 50
+			]
+		};
+		const r = calculateTotals({ persons: [p], gstPercentage: 18 });
+		expect(r.persons[0]!.totalAmount).toBeCloseTo(168, 6); // 118 + 50
+	});
+
+	it('accepts percentage discount as DiscountValue object', () => {
+		const r = calculateTotals({
+			persons: [person('Ali', [100])],
+			discountOnTotalBill: { value: 10, unit: 'pct' }
+		});
+		expect(r.persons[0]!.totalAmount).toBeCloseTo(90, 6);
+	});
+
+	it('accepts fixed-amount discount, distributed pro-rata', () => {
+		// Two people, totals 60 and 40, fixed discount of 10 → factor 0.9 → 54 + 36 = 90
+		const r = calculateTotals({
+			persons: [person('Ali', [60]), person('Bea', [40])],
+			discountOnTotalBill: { value: 10, unit: 'amt' }
+		});
+		expect(r.persons[0]!.totalAmount).toBeCloseTo(54, 6);
+		expect(r.persons[1]!.totalAmount).toBeCloseTo(36, 6);
+		expect(r.totalBill).toBeCloseTo(90, 6);
+	});
+
+	it('caps a fixed-amount discount at the bill total', () => {
+		const r = calculateTotals({
+			persons: [person('Ali', [50])],
+			discountOnTotalBill: { value: 999, unit: 'amt' }
+		});
+		expect(r.persons[0]!.totalAmount).toBe(0);
+		expect(r.totalBill).toBe(0);
+	});
 });

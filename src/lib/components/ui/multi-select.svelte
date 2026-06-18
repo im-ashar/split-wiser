@@ -29,6 +29,7 @@
 	}: Props = $props();
 
 	let search = $state('');
+	let open = $state(false);
 
 	const indexByOption = $derived.by(() => {
 		const map = new Map<unknown, number>();
@@ -99,11 +100,12 @@
 
 <Combobox.Root
 	type="multiple"
+	bind:open
 	value={selectedKeys}
 	onValueChange={handleChange}
 	{disabled}
-	onOpenChange={(open) => {
-		if (!open) search = '';
+	onOpenChange={(o) => {
+		if (!o) search = '';
 	}}
 >
 	<div class={cn('flex flex-col gap-2', className)}>
@@ -116,6 +118,8 @@
 					'disabled:cursor-not-allowed disabled:opacity-50'
 				)}
 				oninput={(e) => (search = (e.currentTarget as HTMLInputElement).value)}
+				onfocus={() => (open = true)}
+				onclick={() => (open = true)}
 				{placeholder}
 				aria-label={placeholder}
 			/>

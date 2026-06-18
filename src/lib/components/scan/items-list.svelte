@@ -1,8 +1,12 @@
 <script lang="ts" module>
+	import type { DiscountValue } from '$lib/split/discount';
+
 	export interface ScanItemRow {
 		id: number;
 		name: string;
 		price: number; // gross price as printed
+		discount: DiscountValue; // item-level discount (% or fixed amount)
+		excludeGst: boolean; // if true, GST is not applied to this item
 		assigneeIds: number[];
 		divide: boolean;
 	}
@@ -11,16 +15,19 @@
 <script lang="ts">
 	import type { GstSettings } from '$lib/scan/gst';
 	import { splitGst } from '$lib/scan/gst';
+	import { applyDiscount, discountAmount } from '$lib/split/discount';
 	import { formatMoney } from '$lib/utils/money';
 	import Input from '$lib/components/ui/input.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import MultiSelect from '$lib/components/ui/multi-select.svelte';
+	import DiscountInput from '$lib/components/ui/discount-input.svelte';
 	import type { SelectOption } from '$lib/components/ui/select.svelte';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import Plus from '@lucide/svelte/icons/plus';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Users from '@lucide/svelte/icons/users';
+	import Tag from '@lucide/svelte/icons/tag';
 	import { cn } from '$lib/utils/cn';
 	import type { Person } from '$lib/types/splitwise';
 
@@ -29,10 +36,19 @@
 		persons: Person[];
 		gst: { applyGst: boolean; settings: GstSettings };
 		currency: string;
+		/** Optional bill-level discount; when set, the totals strip shows it applied. */
+		billDiscount?: DiscountValue;
 		onItemsChange: (items: ScanItemRow[]) => void;
 	};
 
-	let { items, persons, gst, currency, onItemsChange }: Props = $props();
+	let {
+		items,
+		persons,
+		gst,
+		currency,
+		billDiscount,
+		onItemsChange
+	}: Props = $props();
 
 	const personOptions = $derived<SelectOption<number>[]>(
 		persons.map((p) => ({ label: p.name, value: p.id }))
@@ -42,8 +58,18 @@
 		gst.applyGst ? gst.settings : { rate: 0, pricesInclude: false }
 	);
 
+	/** Discounted price for an item before GST treatment. */
+	function discountedPrice(row: ScanItemRow): number {
+		return Math.round(applyDiscount(row.price, row.discount) * 100) / 100;
+	}
+
+	/** Net / GST / Gross for display in the item card. */
 	function rowSplit(row: ScanItemRow) {
-		return splitGst(row.price, effectiveGst);
+		const base = discountedPrice(row);
+		if (row.excludeGst) {
+			return { net: base, gst: 0, gross: base };
+		}
+		return splitGst(base, effectiveGst);
 	}
 
 	function perPersonGross(row: ScanItemRow): number {
@@ -57,7 +83,7 @@
 		let tax = 0;
 		let gross = 0;
 		for (const r of items) {
-			const s = splitGst(r.price, effectiveGst);
+			const s = rowSplit(r);
 			net += s.net;
 			tax += s.gst;
 			gross += s.gross;
@@ -71,6 +97,13 @@
 
 	const assignedCount = $derived(items.filter((r) => r.assigneeIds.length > 0).length);
 
+	const billDiscountAmount = $derived(
+		billDiscount && billDiscount.value > 0
+			? Math.min(totals.gross, discountAmount(totals.gross, billDiscount))
+			: 0
+	);
+	const finalTotal = $derived(Math.max(0, totals.gross - billDiscountAmount));
+
 	function update(id: number, patch: Partial<ScanItemRow>) {
 		onItemsChange(items.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 	}
@@ -83,7 +116,15 @@
 		const id = Date.now() + Math.random();
 		onItemsChange([
 			...items,
-			{ id, name: '', price: 0, assigneeIds: [], divide: true }
+			{
+				id,
+				name: '',
+				price: 0,
+				discount: { value: 0, unit: 'pct' },
+				excludeGst: false,
+				assigneeIds: [],
+				divide: true
+			}
 		]);
 	}
 
@@ -117,7 +158,7 @@
 				</span>
 			{/if}
 		</div>
-		<div class="flex items-center gap-4 font-mono text-sm">
+		<div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 font-mono text-sm">
 			{#if gst.applyGst}
 				<span class="hidden text-fg-muted sm:inline">
 					Net <span class="text-fg">{formatMoney(totals.net, currency)}</span>
@@ -126,9 +167,21 @@
 					GST <span class="text-fg">{formatMoney(totals.gst, currency)}</span>
 				</span>
 			{/if}
-			<span class="font-semibold text-fg">
-				{formatMoney(totals.gross, currency)}
-			</span>
+			{#if billDiscountAmount > 0}
+				<span class="text-fg-muted">
+					Subtotal <span class="text-fg">{formatMoney(totals.gross, currency)}</span>
+				</span>
+				<span class="text-success">
+					−{formatMoney(billDiscountAmount, currency)}
+				</span>
+				<span class="font-semibold text-fg">
+					{formatMoney(finalTotal, currency)}
+				</span>
+			{:else}
+				<span class="font-semibold text-fg">
+					{formatMoney(totals.gross, currency)}
+				</span>
+			{/if}
 		</div>
 	</div>
 
@@ -194,18 +247,63 @@
 					</Button>
 				</div>
 
+				<!-- Discount + GST-exclude controls -->
+				<div class="flex flex-wrap items-center gap-3 rounded-md bg-surface-muted px-3 py-2 text-xs">
+					<!-- Discount input (% or fixed amount) -->
+					<label class="flex items-center gap-1.5 text-fg-muted">
+						<Tag class="size-3" aria-hidden="true" />
+						<span>Discount</span>
+						<DiscountInput
+							value={row.discount}
+							{currency}
+							class="!h-8 w-36"
+							ariaLabel="Item discount"
+							onChange={(next) => update(row.id, { discount: next })}
+						/>
+					</label>
+
+					{#if row.discount.value > 0}
+						<span class="font-mono text-success">
+							−{discountAmount(row.price, row.discount).toFixed(2)} → {discountedPrice(row).toFixed(2)}
+						</span>
+					{/if}
+
+					<!-- GST-exclude toggle — only when GST is on -->
+					{#if gst.applyGst}
+						<label class="ml-auto flex cursor-pointer items-center gap-1.5 font-medium text-fg">
+							<input
+								type="checkbox"
+								class="size-3.5"
+								checked={row.excludeGst}
+								onchange={(e) =>
+									update(row.id, {
+										excludeGst: (e.currentTarget as HTMLInputElement).checked
+									})}
+							/>
+							Exclude from GST
+						</label>
+					{/if}
+				</div>
+
 				<!-- GST breakdown bar -->
 				{#if gst.applyGst}
 					<div class="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-surface-muted px-3 py-1.5 text-xs font-mono">
-						<span class="text-fg-muted">
-							Net <span class="text-fg">{parts.net.toFixed(2)}</span>
-						</span>
-						<span class="text-fg-muted">
-							GST <span class="text-fg">{parts.gst.toFixed(2)}</span>
-						</span>
-						<span class="ml-auto text-fg-muted">
-							Gross <span class="font-semibold text-fg">{parts.gross.toFixed(2)}</span>
-						</span>
+						{#if row.excludeGst}
+							<span class="text-fg-muted italic">GST excluded</span>
+							<span class="ml-auto text-fg-muted">
+								Total <span class="font-semibold text-fg">{parts.gross.toFixed(2)}</span>
+							</span>
+						{:else}
+							<span class="text-fg-muted">
+								Net <span class="text-fg">{parts.net.toFixed(2)}</span>
+							</span>
+							<span class="text-fg-muted">
+								GST <span class="text-fg">{parts.gst.toFixed(2)}</span>
+							</span>
+							<span class="ml-auto text-fg-muted">
+								Gross <span class="font-semibold text-fg">{parts.gross.toFixed(2)}</span>
+							</span>
+						{/if}
 					</div>
 				{/if}
 
